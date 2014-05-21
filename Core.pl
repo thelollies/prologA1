@@ -6,7 +6,7 @@ street(milan,genoa).
 street(genoa,rome).
 street(rome,napoli).
 
-% My added street
+% My added streets
 street(wellington, hawkes_bay).
 street(wellington, new_plymoth).
 street(hawkes_bay, auckland).
@@ -19,14 +19,10 @@ street(hamilton, auckland).
 
 actionStreet(A,B):- street(A,B); street(B,A).
 
-% Capture the case where not arguments are given to actionStreet
-giveSolution(actionStreet, Start, End, Steps):- actionStreet(Start,X), giveSolution(actionStreet(Start, X), Start, End, Steps, [Start|[X]]).
-
-% Base case
-giveSolution(actionStreet(A,B), _, B, Steps, _):- actionStreet(A,B), Steps=[street(A,B)].
-
-% Continue searching
-giveSolution(actionStreet(A,B), Start, End, [street(A,B)|Steps], Visited):- 
-	actionStreet(B,X), 
+% Fix this first part of giveSolution. Shouldn't allow going from same start finish
+giveSolution(P, Start, End, Steps):- giveSolution(P, X, End, Steps, [Start]).
+giveSolution(_, B, B, Steps, _):- Steps=[].
+giveSolution(P, Start, End, [street(A,B)|Steps], Visited):- 
+	call(P, Start, X), 
 	not(member(X, Visited)), 
-	giveSolution(actionStreet(B,X), Start, End, Steps, [X|Visited]).
+	giveSolution(P, X, End, Steps, [X|Visited]).
