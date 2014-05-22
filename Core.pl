@@ -59,5 +59,5 @@ makeTree(P, City, Cities, Visited, Tree):- */
 neighboursIn(P, [H|Possible] , City, Result):- 
 	(call(P, City, H) -> Res = H; Res = []),
 	neighboursIn(P, Possible, City, Rest),
-	Result = [Res | Rest].  
+	(not(Res = []) -> Result = [Res | Rest].  
 neighboursIn(_, [], _, Result):- Result = [].
