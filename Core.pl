@@ -16,48 +16,37 @@ street(hawkes_bay, taupo).
 street(taupo, hamilton).
 street(taupo, new_plymoth).
 street(hamilton, auckland).
+street(auckland, northland).
 
 actionStreet(A,B):- street(A,B); street(B,A).
 
-giveSolution(P, Start, End, [Start|Steps]):- 
-	(var(End) -> X=y ; X=f), % Sets X to indicate whether End was set
-	giveSolution(P, Start, End, Steps, [Start]), 
-	not(Start == End),
-	(X == y -> setConnected([Start|Steps]); true). % If End was not set, remove results from unreachable nodes list.
-giveSolution(_, B, B, [], _).
-giveSolution(P, Start, End, [X|Steps], Visited):- 
-	call(P, Start, X), 
-	not(member(X, Visited)),
-	giveSolution(P, X, End, Steps, [X|Visited]).
+:-dynamic isthmus/3.
 
-setConnected(Nodes):- setConnected(Nodes, Nodes).
-setConnected([],_).
-setConnected([Current|ToSave], Connected):- 
-	getNodeReachables(Current, SavedReach), 
-	subtract(Reachable, Connected, Result),
-	nb_setval(Current, Result),
-	setConnected(ToSave, Connected).
+giveSolution(P, Start, End, Steps):- 
+	giveSolution(P, Start, End, StepsBackwards, [Start]),
+	reverse(StepsBackwards, Steps).
+giveSolution(_, End, End, Visited, Visited).
+giveSolution(P, Current, End, Steps, Visited):- 
+	next(P, Current, End, Visited, Next), 
+	(giveSolution(P, Next, End, Steps, [Next|Visited]) ->
+	true ; (checkIsthmus(End, Current, Next), false)).
 
-getNodeReachables(Node, Reachable):- 
-	catch(nb_getval(Node, Reachable), 
-        error(_,_Context),
-        Reachable = []).
+checkIsthmus(End, From, To):- 
+	isthmus(End, From, To); isIsthmus(From, To), assert(isthmus(End, From, To)).
 
-allCities(Result):- 
+% Determines if the street between two cities is an isthmus.
+% Assumes there is a street between the provided cities.
+isIsthmus(From, To):- indirectlyConnected(Node1, Node2, [Node1, Node2]).
+isIsthmus(Current, Node2, Nodes):- 
+	actionStreet(Current, Next), not(member(Next, Nodes)),
+	(actionStreet(Next, Node2); indirectlyConnected(Next, Node2, [Next|Nodes])).
+
+next(P, Current, End, Visited, Next):- 
+	call(P, Current, Next),
+	writef('%w \n', [next(P, Current, End, Visited, Next)]),
+	not(member(Next, Visited)),
+	not(isthmus(End, Current, Next)).
+
+/*allCities(Result):- 
 	findall(A,actionStreet(A,_),ListWith),
-	sort(ListWith,Result).
-
-
-node(Elem, SubNodes).
-%artPoints(Nodes, ArtPoints):- 
-
-/*makeTree(_, City, [], _, Tree):- Tree = node(City, []).
-makeTree(P, City)
-makeTree(P, City, Cities, Visited, Tree):- */
-
-
-neighboursIn(P, [H|Possible] , City, Result):- 
-	(call(P, City, H) -> Res = H; Res = []),
-	neighboursIn(P, Possible, City, Rest),
-	(not(Res = []) -> Result = [Res | Rest].  
-neighboursIn(_, [], _, Result):- Result = [].
+	sort(ListWith,Result). % Remove duplicates*/
