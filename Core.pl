@@ -22,31 +22,42 @@ actionStreet(A,B):- street(A,B); street(B,A).
 
 :-dynamic isthmus/3.
 
-giveSolution(P, Start, End, Steps):- 
-	giveSolution(P, Start, End, StepsBackwards, [Start]),
-	reverse(StepsBackwards, Steps).
-giveSolution(_, End, End, Visited, Visited).
-giveSolution(P, Current, End, Steps, Visited):- 
-	next(P, Current, End, Visited, Next), 
-	(giveSolution(P, Next, End, Steps, [Next|Visited]) ->
-	true ; (checkIsthmus(End, Current, Next), false)).
+% A predicate describing paths between cities, search occurs depth first
+giveSolution(P, Start, End, [Start|Steps]):- 
+	giveSolution(P, Start, End, Steps, [Start]).
+giveSolution(_, End, End, [], _).
+giveSolution(P, Current, End, [Next|Steps], Visited):- 
+	next(P, Current, End, Visited, Next),
+	(giveSolution(P, Next, End, Steps, [Next|Visited]) *-> true;
+	(checkIsthmus(End, Current, Next), false)).
 
+% A predicate describing paths between cities, search occurs depth first
+giveSolutionBreadth(P, Start, End, [Start|Steps]):- 
+	giveSolutionBreadth(P, Start, End, Steps, [Start]).
+giveSolutionBreadth(_, End, End, [], _).
+giveSolutionBreadth(P, Current, End, [Next|Steps], Visited):- 
+	next(P, Current, End, Visited, Next),
+	(giveSolutionBreadth(P, Next, End, Steps, [Next|Visited]) *-> true;
+	(checkIsthmus(End, Current, Next), false)).
+
+% Finds the next possible node using a given transition function
+next(P, Current, End, Visited, Next):- 
+	call(P, Current, Next),
+	not(member(Next, Visited)),
+	not(isthmus(End, Current, Next)).
+
+% Uncaches all streets to avoid
+cleanUp:- retractall(isthmus(_,_,_)).
+
+% Marks a street as not worth going down when searching for the 
+% specifed End if it is an isthmus. Should only be called on
+% streets that led to no results being found. 
 checkIsthmus(End, From, To):- 
 	isthmus(End, From, To); isIsthmus(From, To), assert(isthmus(End, From, To)).
 
 % Determines if the street between two cities is an isthmus.
 % Assumes there is a street between the provided cities.
-isIsthmus(From, To):- indirectlyConnected(Node1, Node2, [Node1, Node2]).
-isIsthmus(Current, Node2, Nodes):- 
+isIsthmus(Node1, Node2):- not(notIsthmus(Node1, Node2, [Node1, Node2])).
+notIsthmus(Current, Node2, Nodes):- 
 	actionStreet(Current, Next), not(member(Next, Nodes)),
-	(actionStreet(Next, Node2); indirectlyConnected(Next, Node2, [Next|Nodes])).
-
-next(P, Current, End, Visited, Next):- 
-	call(P, Current, Next),
-	writef('%w \n', [next(P, Current, End, Visited, Next)]),
-	not(member(Next, Visited)),
-	not(isthmus(End, Current, Next)).
-
-/*allCities(Result):- 
-	findall(A,actionStreet(A,_),ListWith),
-	sort(ListWith,Result). % Remove duplicates*/
+	(actionStreet(Next, Node2); notIsthmus(Next, Node2, [Next|Nodes])).
