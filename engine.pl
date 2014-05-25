@@ -54,7 +54,7 @@ actionStreet(A,B):- street(A,B); street(B,A).
 
 % A predicate describing paths between cities, search occurs depth first
 giveSolution(P, Start, End, [Start|Steps]):- 
-	giveSolution(P, Start, End, Steps, [Start]), callPred(giveSolution).
+	giveSolution(P, Start, End, Steps, [Start]), callPred(giveSolution), cleanUp.
 giveSolution(_, End, End, [], _):- callPred(giveSolution).
 giveSolution(P, Current, End, [Next|Steps], Visited):- 
 	callPred(giveSolution),
@@ -83,7 +83,8 @@ giveSolutionIterative(P, Current, End, MaxDepth, [Next|Steps], Visited):-
 	giveSolutionIterative(P, Next, End, MaxDepth - 1, Steps, [Next|Visited]).
 
 % A helper predicate that repeats giveSolutionIterative with increasing maximim
-% depth until a result is found or the maximum depth is reached
+% depth until a result is found or the maximum depth is reached. A cut is used
+% to prevent backtracking if any solution is found.
 iterateUpSolutions(P, Start, End, Depth, MaxDepth, Steps):-
 	Depth =< MaxDepth,
 	callPred(giveSolutionIterative),
@@ -129,10 +130,22 @@ callPred(Name):-
 % Performance statistics are the Time that each predicate takes
 % as well as the number of predicate (and subpredicate) calls for
 % each predicate.
-performance(PNormal, PBreadth, PIterative, TNormal, TBreadth, TIterative, CNormal, CBreadth, CIterative):- 
+performance(P, Start, End, Steps, MaxDepth):- 
 	retractall(predCalls(_,_)), % Reset predicate call counts
-	statistics(cputime, SN), findall(_, call(PNormal),_), statistics(cputime, EN), TNormal is round(1000000*(EN - SN)),
-	statistics(cputime, SB), findall(_, call(PBreadth),_), statistics(cputime, EB), TBreadth is round(1000000*(EB - SB)),
-	statistics(cputime, SI), findall(_, call(PIterative),_), statistics(cputime, EI), TIterative is round(1000000*(EI - SI)),
-	predCalls(giveSolution, CNormal), predCalls(giveSolutionBreadth, CBreadth), predCalls(giveSolutionIterative, CIterative). 
+	statistics(cputime, SN), 
+	findall(_, call(giveSolution, P, Start, End, Steps),_), 
+	statistics(cputime, EN), TNormal is round(1000000*(EN - SN)),
+	statistics(cputime, SB), 
+	writef('%w\n',[performance(P, Start, End, Steps, MaxDepth)]),
+	findall(_, call(giveSolutionBreadth, P, Start, End, Steps),_), statistics(cputime, EB), 
+	TBreadth is round(1000000*(EB - SB)),
+	statistics(cputime, SI), 
+	findall(_, call(giveSolutionIterative, P, Start, End, MaxDepth, _),_), statistics(cputime, EI), 
+	TIterative is round(1000000*(EI - SI)),
+	predCalls(giveSolution, CNormal), predCalls(giveSolutionBreadth, CBreadth), predCalls(giveSolutionIterative, CIterative),
+	write('Performance Results\nTime (microseconds):\n'),
+	writef('\tNormal: %w\n\tBreadth: %w\n\tIterative: %w\n',[TNormal, TBreadth, TIterative]),
+	write('Predicate Calls:\n'),
+	writef('\tNormal: %w\n\tBreadth: %w\n\tIterative: %w\n',[CNormal, CBreadth, CIterative]).
+ 
 	
